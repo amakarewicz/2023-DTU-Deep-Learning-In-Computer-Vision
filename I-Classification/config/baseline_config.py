@@ -1,4 +1,5 @@
 # Parameters
+MODEL_NAME = 'simpleNET'
 BATCH_SIZE = 64
 IMG_SIZE = 300
 DROP_OUT_RATE = 0.4
