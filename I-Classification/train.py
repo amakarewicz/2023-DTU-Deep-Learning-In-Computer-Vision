@@ -20,16 +20,16 @@ def train(model, train_loader, test_loader, loss_function, optimizer, num_epochs
         train_len = 0
         train_loss = []
         for minibatch_no, (data, target) in tqdm(enumerate(train_loader), total=len(train_loader)):
-            data, target = data.to(device), target.to(device)
+            data, target = data.to(device), target.type(torch.FloatTensor).to(device)
             optimizer.zero_grad()
-            output = model(data)
+            output = model(data)[:,0]
             loss = loss_function(output, target)
             loss.backward()
             optimizer.step()
             if lr_scheduler is not None:
                 lr_scheduler.step()
             train_loss.append(loss.item())
-            predicted = output.argmax(1)
+            predicted = output > 0.5
             train_correct += (target==predicted).sum().cpu().item()
             train_len += data.shape[0]
             
@@ -38,11 +38,11 @@ def train(model, train_loader, test_loader, loss_function, optimizer, num_epochs
         test_len = 0
         model.eval()
         for data, target in test_loader:
-            data, target = data.to(device), target.to(device)
+            data, target = data.to(device), target.type(torch.FloatTensor).to(device)
             with torch.no_grad():
-                output = model(data)
+                output = model(data)[:,0]
             test_loss.append(loss_function(output, target).cpu().item())
-            predicted = output.argmax(1)
+            predicted = output > 0.5
             test_correct += (target==predicted).sum().cpu().item()
             test_len += data.shape[0]
             
