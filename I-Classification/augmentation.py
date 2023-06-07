@@ -2,10 +2,16 @@ import torchvision.transforms as transforms
 import torch
 from config.baseline_config import IMG_SIZE
 
+# transforms_0 = transforms.Compose([transforms.ToTensor(),
+#                                    transforms.Resize((IMG_SIZE,IMG_SIZE), antialias=True),
+#                                    transforms.Normalize(0, 1)
+#                                   ])
+
 transforms_0 = transforms.Compose([transforms.ToTensor(),
                                    transforms.Resize((IMG_SIZE,IMG_SIZE), antialias=True),
-                                   transforms.Normalize(0, 1)
+                                   transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]) # For the Imagenet Transfer learning
                                   ])
+
 
 # transforms_1 = transforms.Compose([transforms.ToTensor(),
 #                                    transforms.Resize((IMG_SIZE,IMG_SIZE), antialias=True),
