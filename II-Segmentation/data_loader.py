@@ -16,20 +16,30 @@ import matplotlib.pyplot as plt
 
 data_path = '/dtu/datasets1/02514/PH2_Dataset_images/'
 class PH2(torch.utils.data.Dataset):
-    def __init__(self, train, transform, data_path=data_path, train_size=0.66):
+    def __init__(self, part, transform, data_path=data_path, test_size=0.2):
         'Initialization'
         self.transform = transform
         files = glob.glob(data_path + '*')
         
         np.random.seed(420)
-        train_files = np.random.choice(files, int(train_size * len(files)), replace=False) 
-        test_files = [f for f in files if f not in train_files]
+        train_files = np.random.choice(files, int( (1-test_size)  * len(files)), replace=False) 
+        
+        np.random.seed(420)
+        val_files = np.random.choice(train_files, int(test_size  * len(files)), replace=False) 
 
-        if train:
+        train_files = [f for f in files if f not in val_files ]
+        test_files = [f for f in files if f not in list(train_files) + list(val_files) ]
+        
+
+        
+        if part == 'train':
             files_to_read = train_files
+        elif part == 'val':
+            files_to_read = val_files
         else:
             files_to_read = test_files
-
+        
+        
         img_ids = pd.Series(files_to_read).str.split('/').apply(lambda x: x[-1])
         img_path   = data_path + img_ids +'/'+ img_ids + '_Dermoscopic_Image/' + img_ids + '.bmp'
         label_path = data_path + img_ids +'/'+ img_ids + '_lesion/' + img_ids + '_lesion.bmp'
@@ -46,12 +56,14 @@ class PH2(torch.utils.data.Dataset):
         image_path = self.image_paths[idx]
         label_path = self.label_paths[idx]
         
-        image = np.array(plt.imread(image_path))
+        image = np.asarray(Image.open(image_path))
         # taking the first channel as they are the same
-        label = np.array(plt.imread(label_path)[:,:,0])
-        Y = self.transform(label)
-        X = self.transform(image)
-        return X, Y
+        mask = np.asarray(Image.open(label_path)) * 1.0
+        
+        if self.transform is not None:
+            transformed = self.transform(image=image, mask=mask)
+        return transformed['image'], transformed['mask']
+        
 
 class DRIVE(torch.utils.data.Dataset):
     def __init__(self, train, transform, data_path='/dtu/datasets1/02514/DRIVE/'):
