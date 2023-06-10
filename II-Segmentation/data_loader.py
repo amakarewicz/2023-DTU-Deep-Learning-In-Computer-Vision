@@ -23,20 +23,20 @@ class PH2(torch.utils.data.Dataset):
         
         np.random.seed(420)
         train_files = np.random.choice(files, int( (1-test_size)  * len(files)), replace=False) 
-        
+  
         np.random.seed(420)
         val_files = np.random.choice(train_files, int(test_size  * len(files)), replace=False) 
 
-        train_files = [f for f in files if f not in val_files ]
-        test_files = [f for f in files if f not in list(train_files) + list(val_files) ]
+        test_files = [f for f in files if f not in train_files]
+        train_files = [f for f in train_files if f not in val_files ]
         
 
         
         if part == 'train':
             files_to_read = train_files
-        elif part == 'val':
+        if part == 'val':
             files_to_read = val_files
-        else:
+        if part == 'test':
             files_to_read = test_files
         
         
