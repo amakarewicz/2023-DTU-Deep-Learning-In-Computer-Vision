@@ -59,7 +59,7 @@ class DRIVE(torch.utils.data.Dataset):
         self.transform = transform
         data_path = os.path.join(data_path, 'training' if train else 'test')
         self.image_paths = sorted(glob.glob(data_path + '/images/*.tif'))
-        self.label_paths = sorted(glob.glob(data_path + '/mask/*.gif'))
+        self.label_paths = sorted(glob.glob(data_path + '/1st_manual/*.gif' if train else data_path + '/mask/*.gif' ))
 
     def __len__(self):
         'Returns the total number of samples'

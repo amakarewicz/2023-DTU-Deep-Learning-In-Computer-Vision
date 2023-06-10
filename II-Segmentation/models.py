@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class Baseline(nn.Module):
     # Based on the EncDec network from the exercises
