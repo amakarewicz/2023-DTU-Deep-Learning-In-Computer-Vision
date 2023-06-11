@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 from time import time
 import pandas as pd
-
+import random
 import matplotlib.pyplot as plt
 
 
@@ -72,6 +72,15 @@ class DRIVE(torch.utils.data.Dataset):
         
         image = Image.open(image_path)
         label = Image.open(label_path)
+        #image = np.asarray(Image.open(image_path))
+        # taking the first channel as they are the same
+        #mask = np.asarray(Image.open(label_path))
+        seed = random.randint(0, 2147483647)
+        torch.manual_seed(seed)
+        #if self.transform is not None:
+        #    transformed = self.transform(image=image, mask=mask)
+        #return transformed['image'], transformed['mask']
         Y = self.transform(label)
+        torch.manual_seed(seed)
         X = self.transform(image)
         return X, Y

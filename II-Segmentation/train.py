@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from time import time
 from IPython.display import clear_output
+from loss import IoU
 
 def train(model, opt, loss_fn, epochs, train_loader, test_loader, device):
     X_test, Y_test = next(iter(test_loader))
@@ -19,6 +20,8 @@ def train(model, opt, loss_fn, epochs, train_loader, test_loader, device):
 
         avg_loss = 0
         model.train()  # train mode
+        train_loss = []
+        train_acc = []
         for X_batch, Y_batch in train_loader:
             X_batch = X_batch.to(device)
             Y_batch = Y_batch.to(device)
@@ -28,7 +31,11 @@ def train(model, opt, loss_fn, epochs, train_loader, test_loader, device):
 
             # forward
             Y_pred = model(X_batch)
+            #print(f"Y_pred shape: {Y_pred.shape}")
+            #print(f"Y_batch shape: {Y_batch.shape}")
             loss = loss_fn(Y_batch, Y_pred)  # forward-pass
+            train_loss.append(loss.item())
+            train_acc.append(IoU(Y_batch, Y_pred).cpu().numpy())
             loss.backward()  # backward-pass
             opt.step()  # update weights
 
@@ -53,6 +60,10 @@ def train(model, opt, loss_fn, epochs, train_loader, test_loader, device):
             plt.axis('off')
         plt.suptitle('%d / %d - loss: %f' % (epoch+1, epochs, avg_loss))
         plt.show()
+        out_dict['train_acc'].append(np.mean(train_acc))
+        #out_dict['test_acc'].append(test_correct/test_len)
+        out_dict['train_loss'].append(np.mean(train_loss))
+        #out_dict['test_loss'].append(np.mean(test_loss))
 
     return out_dict
 
