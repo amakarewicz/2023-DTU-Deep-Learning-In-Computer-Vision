@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class Baseline(nn.Module):
     # Based on the EncDec network from the exercises
@@ -45,3 +46,24 @@ class Baseline(nn.Module):
         d2 = F.relu(self.dec_conv2(self.upsample2(d1)))
         d3 = self.dec_conv3(self.upsample3(d2))  # no activation
         return d3
+
+class SimpleCNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        # encoder (downsampling)
+        self.enc_conv0 = nn.Conv2d(3, 64, 3, padding=1)
+        self.enc_conv1 = nn.Conv2d(64, 64, 3, padding=1)
+        self.enc_conv2 = nn.Conv2d(64, 64, 3, padding=1)
+        self.enc_conv3 = nn.Conv2d(64, 1, 3, padding=1)
+        
+    def forward(self, x):
+        # encoder
+        e0 = F.relu(self.enc_conv0(x))
+        e1 = F.relu(self.enc_conv1(e0))
+        e2 = F.relu(self.enc_conv2(e1))
+
+        # no activation
+        e3 = self.enc_conv3(e2)
+        
+        return e3
