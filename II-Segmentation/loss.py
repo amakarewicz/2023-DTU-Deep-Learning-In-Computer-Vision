@@ -18,7 +18,7 @@ def focal_loss(y_real, y_pred, gamma=2):
     return -1 * (left+right).sum()
 
 def cross_entropy():
-    loss_fn = torch.nn.BCEWithLogitsLoss()
+    loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor([10]).cuda())
     return loss_fn
 
 def IoU(y_real, y_pred):

@@ -31,8 +31,8 @@ def train(model, opt, loss_fn, epochs, train_loader, test_loader, device):
 
             # forward
             Y_pred = model(X_batch)
-            #print(f"Y_pred shape: {Y_pred.shape}")
-            #print(f"Y_batch shape: {Y_batch.shape}")
+            print(f"Y_pred shape: {Y_pred.shape}")
+            print(f"Y_batch shape: {Y_batch.shape}")
             loss = loss_fn(Y_batch, Y_pred)  # forward-pass
             train_loss.append(loss.item())
             train_acc.append(IoU(Y_batch, Y_pred).cpu().numpy())
