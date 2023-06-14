@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 from time import time
 import pandas as pd
+import random
 
 import matplotlib.pyplot as plt
 
@@ -23,20 +24,20 @@ class PH2(torch.utils.data.Dataset):
         
         np.random.seed(420)
         train_files = np.random.choice(files, int( (1-test_size)  * len(files)), replace=False) 
-        
+  
         np.random.seed(420)
         val_files = np.random.choice(train_files, int(test_size  * len(files)), replace=False) 
 
-        train_files = [f for f in files if f not in val_files ]
-        test_files = [f for f in files if f not in list(train_files) + list(val_files) ]
+        test_files = [f for f in files if f not in train_files]
+        train_files = [f for f in train_files if f not in val_files ]
         
 
         
         if part == 'train':
             files_to_read = train_files
-        elif part == 'val':
+        if part == 'val':
             files_to_read = val_files
-        else:
+        if part == 'test':
             files_to_read = test_files
         
         
@@ -71,7 +72,7 @@ class DRIVE(torch.utils.data.Dataset):
         self.transform = transform
         data_path = os.path.join(data_path, 'training' if train else 'test')
         self.image_paths = sorted(glob.glob(data_path + '/images/*.tif'))
-        self.label_paths = sorted(glob.glob(data_path + '/mask/*.gif'))
+        self.label_paths = sorted(glob.glob(data_path + '/1st_manual/*.gif' if train else data_path + '/mask/*.gif' ))
 
     def __len__(self):
         'Returns the total number of samples'
@@ -82,8 +83,10 @@ class DRIVE(torch.utils.data.Dataset):
         image_path = self.image_paths[idx]
         label_path = self.label_paths[idx]
         
-        image = Image.open(image_path)
-        label = Image.open(label_path)
-        Y = self.transform(label)
-        X = self.transform(image)
-        return X, Y
+        image = np.asarray(Image.open(image_path))
+        # taking the first channel as they are the same
+        mask = np.asarray(Image.open(label_path)).astype(int) /255.0
+        
+        if self.transform is not None:
+            transformed = self.transform(image=image, mask=mask)
+        return transformed['image'], transformed['mask']

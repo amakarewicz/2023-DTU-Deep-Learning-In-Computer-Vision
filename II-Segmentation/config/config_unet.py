@@ -4,7 +4,7 @@ LEARNING_RATE = 1e-3
 EPOCHS = 200
 WEIGHT_DECAY = 1e-4
 
-MODEL_NAME = "simple_cnn"
+MODEL_NAME = "baseline"
 AUGS = "minor"
 LOSS = "dice"
 OPTIM = "adam"
