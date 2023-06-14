@@ -6,3 +6,8 @@ python ~/course02514/stylegan2-ada-pytorch/projector.py --outdir=latent_codes/se
 
 # Generate from npz
 python ~/course02514/stylegan2-ada-pytorch/generate.py --outdir=latent_codes/seed0001 --projected-w=latent_codes/seed0001/smile_projected_w.npz --network=https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/ffhq.pkl
+
+# Tools
+## pretrained_direction.py - move image, towards direction by a step
+cd tools
+python pretrained_direction.py seed0001 smile 3
