@@ -64,8 +64,9 @@ def visualize_img_and_label(set_):
         plt.xticks([])
         plt.yticks([])
         plt.subplots_adjust(hspace=0, wspace=0)
+    plt.savefig('output.png')
     plt.show()
-
+    
 
 class DiceLoss(nn.Module):
     def __init__(self, weight=None, size_average=True):
