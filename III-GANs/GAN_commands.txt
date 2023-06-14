@@ -5,4 +5,4 @@ python ~/course02514/stylegan2-ada-pytorch/generate.py --outdir=images --trunc=1
 python ~/course02514/stylegan2-ada-pytorch/projector.py --outdir=latent_codes/seed0001 --target=images/seed0001.png --network=https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/ffhq.pkl --save-video=False
 
 # Generate from npz
-python ~/course02514/stylegan2-ada-pytorch/generate.py --outdir=latent_codes/seed0001 --projected_w=latent_codes/seed0001/smile_projected_w.npz --network=https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/ffhq.pkl
+python ~/course02514/stylegan2-ada-pytorch/generate.py --outdir=latent_codes/seed0001 --projected-w=latent_codes/seed0001/smile_projected_w.npz --network=https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/ffhq.pkl
