@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 
 def IoU(boxA, boxB):
@@ -34,7 +35,9 @@ def nms_pytorch(P : torch.tensor ,thresh_iou : float):
     Returns:
         A list of filtered boxes, Shape: [ , 5]
     """
- 
+    # Convert from list of tuples to list of lists
+    P = [list(ele) for ele in P]
+    P = torch.FloatTensor(P)
     # we extract coordinates for every 
     # prediction box present in P
     x1 = P[:, 0]
@@ -43,14 +46,14 @@ def nms_pytorch(P : torch.tensor ,thresh_iou : float):
     y2 = P[:, 3]
  
     # we extract the confidence scores as well
-    scores = P[:, 4]
+    #scores = P[:, 4]
  
     # calculate area of every block in P
     areas = (x2 - x1) * (y2 - y1)
      
     # sort the prediction boxes in P
     # according to their confidence scores
-    order = scores.argsort()
+    order = torch.IntTensor(list(range(0,len(P))))
  
     # initialise an empty list for 
     # filtered prediction boxes
