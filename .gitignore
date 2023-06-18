@@ -161,3 +161,6 @@ cython_debug/
 
 # Exclude main files
 main.ipynb
+ffhq.pkl
+stylegan2_ada_pytorch/
+
