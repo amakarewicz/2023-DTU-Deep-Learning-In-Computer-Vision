@@ -22,7 +22,7 @@ def IoU(boxA, boxB):
 	# return the intersection over union value
 	return iou
 
-def nms_pytorch(P : torch.tensor ,thresh_iou : float):
+def NonMaxSuppress(P : torch.tensor ,thresh_iou : float):
     """
     From https://learnopencv.com/non-maximum-suppression-theory-and-implementation-in-pytorch/
     This might also be an option: https://pyimagesearch.com/2015/02/16/faster-non-maximum-suppression-python/
