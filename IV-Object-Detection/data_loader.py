@@ -103,7 +103,8 @@ class TacoDataset(torch.utils.data.Dataset):
                     I = I.rotate(270,expand=True)
                 if exif[orientation] == 8:
                     I = I.rotate(90,expand=True)
-
+        # Added padding so that bboxes on the edge do not cause issues
+        I = add_margin(I, 10, 10, 10, 10, (0, 0, 0))
         image = np.asarray(I)
 
         # get bounding box coordinates for each mask
@@ -112,7 +113,9 @@ class TacoDataset(torch.utils.data.Dataset):
         iscrowd = [] 
         for i in range(num_objs):
             pos = annotation_dict[i]
-            boxes.append(pos['bbox'])
+            box = pos['bbox']
+            box = [x+10 for x in box]
+            boxes.append(box)
             iscrowd.append(pos['iscrowd'])
         
         # convert everything into a torch.Tensor
@@ -167,3 +170,11 @@ class TacoDataset(torch.utils.data.Dataset):
         images = torch.stack(images, dim=0)
 
         return images, boxes, labels # , difficulties  # tensor (N, 3, 300, 300), 3 lists of N tensors each
+
+def add_margin(pil_img, top, right, bottom, left, color):
+    width, height = pil_img.size
+    new_width = width + right + left
+    new_height = height + top + bottom
+    result = Image.new(pil_img.mode, (new_width, new_height), color)
+    result.paste(pil_img, (left, top))
+    return result
