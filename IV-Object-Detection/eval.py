@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 
-
 def IoU(boxA, boxB):
     ## From https://pyimagesearch.com/2016/11/07/intersection-over-union-iou-for-object-detection/
 	# determine the (x, y)-coordinates of the intersection rectangle
@@ -118,3 +117,6 @@ def NonMaxSuppress(P : torch.tensor ,thresh_iou : float):
         order = order[mask]
      
     return keep
+
+def assign_labels():
+    return None
