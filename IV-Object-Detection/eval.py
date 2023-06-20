@@ -22,6 +22,88 @@ def IoU(boxA, boxB):
 	# return the intersection over union value
 	return iou
 
+def calculate_iou(box1, box2):
+    """
+    Calculate the Intersection over Union (IoU) for two bounding boxes.
+
+    Args:
+        box1 (list): The first bounding box in the format [x0, y0, w, h].
+        box2 (list): The second bounding box in the format [x0, y0, w, h].
+
+    Returns:
+        float: The IoU value.
+
+    """
+    # Extract coordinates from the boxes
+    x1, y1, w1, h1 = box1
+    x2, y2, w2, h2 = box2
+
+    # Calculate the coordinates of the intersection rectangle
+    x_intersection = max(x1, x2)
+    y_intersection = max(y1, y2)
+    w_intersection = min(x1 + w1, x2 + w2) - x_intersection
+    h_intersection = min(y1 + h1, y2 + h2) - y_intersection
+
+    # Handle cases where there is no intersection
+    if w_intersection <= 0 or h_intersection <= 0:
+        return 0.0
+
+    # Calculate the areas of the bounding boxes and intersection
+    area_box1 = w1 * h1
+    area_box2 = w2 * h2
+    area_intersection = w_intersection * h_intersection
+
+    # Calculate the IoU
+    iou = area_intersection / float(area_box1 + area_box2 - area_intersection)
+
+    return iou
+
+def calculate_highest_iou(proposed_boxes, ground_truth_boxes):
+    """
+    Calculate the highest Intersection over Union (IoU) score for each proposed box
+    with respect to the ground truth boxes.
+
+    Args:
+        proposed_boxes (list): List of proposed boxes in the format [[x0, y0, w, h], ...].
+        ground_truth_boxes (list): List of ground truth boxes in the format [[x0, y0, w, h], ...].
+
+    Returns:
+        numpy.ndarray: Array of highest IoU scores for each proposed box.
+
+    """
+    proposed_boxes = np.array(proposed_boxes)
+    ground_truth_boxes = np.array(ground_truth_boxes)
+
+    # Extract coordinates from the boxes
+    x1 = proposed_boxes[:, 0]
+    y1 = proposed_boxes[:, 1]
+    w1 = proposed_boxes[:, 2]
+    h1 = proposed_boxes[:, 3]
+
+    x2 = ground_truth_boxes[:, 0]
+    y2 = ground_truth_boxes[:, 1]
+    w2 = ground_truth_boxes[:, 2]
+    h2 = ground_truth_boxes[:, 3]
+
+    # Calculate the coordinates of the intersection rectangle
+    x_intersection = np.maximum(x1[:, np.newaxis], x2)
+    y_intersection = np.maximum(y1[:, np.newaxis], y2)
+    w_intersection = np.maximum(0, np.minimum(x1[:, np.newaxis] + w1[:, np.newaxis], x2 + w2) - x_intersection)
+    h_intersection = np.maximum(0, np.minimum(y1[:, np.newaxis] + h1[:, np.newaxis], y2 + h2) - y_intersection)
+
+    # Calculate the areas of the bounding boxes and intersection
+    area_box1 = w1 * h1
+    area_box2 = w2 * h2
+    area_intersection = w_intersection * h_intersection
+
+    # Calculate the IoU
+    iou = area_intersection / (area_box1[:, np.newaxis] + area_box2 - area_intersection)
+
+    # Find the highest IoU score for each proposed box
+    max_iou = np.max(iou, axis=1)
+
+    return max_iou
+
 def nms_pytorch(P : torch.tensor ,thresh_iou : float):
     """
     From https://learnopencv.com/non-maximum-suppression-theory-and-implementation-in-pytorch/
@@ -42,8 +124,8 @@ def nms_pytorch(P : torch.tensor ,thresh_iou : float):
     # prediction box present in P
     x1 = P[:, 0]
     y1 = P[:, 1]
-    x2 = P[:, 2]
-    y2 = P[:, 3]
+    x2 = P[:, 2] + P[:, 0] 
+    y2 = P[:, 3] + P[:, 1]
  
     # we extract the confidence scores as well
     #scores = P[:, 4]

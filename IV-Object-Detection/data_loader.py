@@ -49,7 +49,14 @@ for i in range(NUM_IMAGES):
     img_path, ann = get_image_and_annotations(imgs, anns, i)
     image_paths.append(img_path)
     annotations.append(ann)
-    
+
+def add_margin(pil_img, top, right, bottom, left, color):
+    width, height = pil_img.size
+    new_width = width + right + left
+    new_height = height + top + bottom
+    result = Image.new(pil_img.mode, (new_width, new_height), color)
+    result.paste(pil_img, (left, top))
+    return result
 
 class TacoDataset(torch.utils.data.Dataset):
     def __init__(self, part, transforms, data_path=data_path, test_size=0.2):
@@ -91,7 +98,6 @@ class TacoDataset(torch.utils.data.Dataset):
         
         I = Image.open(image_path)
 
-        
         # Load and process image metadata
         if I._getexif():
             exif = dict(I._getexif().items())
@@ -104,15 +110,23 @@ class TacoDataset(torch.utils.data.Dataset):
                 if exif[orientation] == 8:
                     I = I.rotate(90,expand=True)
 
+        
+        I = add_margin(I, 10, 10, 10, 10, (0, 0, 0))
         image = np.asarray(I)
+        
 
         # get bounding box coordinates for each mask
         num_objs = len(annotation_dict)
         boxes = []
         iscrowd = [] 
         for i in range(num_objs):
+
             pos = annotation_dict[i]
-            boxes.append(pos['bbox'])
+    
+            box = pos['bbox']
+            box = [x+10 for x in box]
+            boxes.append(box)
+            
             iscrowd.append(pos['iscrowd'])
         
         # convert everything into a torch.Tensor
@@ -140,30 +154,3 @@ class TacoDataset(torch.utils.data.Dataset):
                                 labels=target["labels"])
 
         return x['image'], x['bboxes'], x['labels']
-    
-    def collate_fn(self, batch):
-        """
-        Since each image may have a different number of objects, we need a collate function (to be passed to the DataLoader).
-
-        This describes how to combine these tensors of different sizes. We use lists.
-
-        Note: this need not be defined in this Class, can be standalone.
-
-        :param batch: an iterable of N sets from __getitem__()
-        :return: a tensor of images, lists of varying-size tensors of bounding boxes, labels, and difficulties
-        """
-
-        images = list()
-        boxes = list()
-        labels = list()
-        # difficulties = list()
-
-        for b in batch:
-            images.append(b[0])
-            boxes.append(b[1])
-            labels.append(b[2])
-            # difficulties.append(b[3])
-
-        images = torch.stack(images, dim=0)
-
-        return images, boxes, labels # , difficulties  # tensor (N, 3, 300, 300), 3 lists of N tensors each
