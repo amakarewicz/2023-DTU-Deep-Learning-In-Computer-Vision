@@ -171,33 +171,32 @@ def edge_boxes_train(images: list, bboxes: list, k: float = 0.5, p: float = 0.01
     return cropped_images_all, proposals_all, predictions_all
 
 
-def edge_boxes_test(images: list, bboxes: list, k: float = 0.5, p: float = 0.01, img_size: int = 150):
+def edge_boxes_test(image, bboxes: list, k: float = 0.5, p: float = 0.01, img_size: int = 150):
     """
     Takes lists of images and bboxes and returns proposals, cropped images and predictions.
     """
     proposals_all = []
     predictions_all = []
     cropped_images_all = []
-    for image, img_bboxes in zip(images, bboxes):
-
-        image_denorm = denormalize(image)
-        proposals = edge_boxes(image_denorm.permute([1,2,0]).numpy())
-        ## proposals = selective_search(image.permute([1,2,0]).numpy())
-        proposals_img = []
+    
+    image_denorm = denormalize(image)
+    proposals = edge_boxes(image_denorm.permute([1,2,0]).numpy())
+    ## proposals = selective_search(image.permute([1,2,0]).numpy())
+    proposals_img = []
 
         # IoU
-        for proposal in proposals:
-            
-            x, y, w, h = proposal
-            
-            # Extract image
-            cropped_image = image[:, y:y+h, x:x+w]
-            resized_image = fn.resize(cropped_image, size=[img_size, img_size])
-            
-            cropped_images_all.append(resized_image)
-            proposals_img.append(proposal.tolist())
-            
-        proposals_all.append(proposals_img)
+    for proposal in proposals:
+        
+        x, y, w, h = proposal
+        
+        # Extract image
+        cropped_image = image[:, y:y+h, x:x+w]
+        resized_image = fn.resize(cropped_image, size=[img_size, img_size])
+        
+        cropped_images_all.append(resized_image)
+        proposals_img.append(torch.tensor(proposal))
+        
+    proposals_all.append(proposals_img)
                 
     return cropped_images_all, proposals_all
 
@@ -221,7 +220,7 @@ def selective_search_test(images: list, bboxes: list, img_size: int = 300):
 
             
                 
-        proposals_all.append(proposals)
+        proposals_all.append(torch.tensor(proposals))
                 
     return cropped_images_all, proposals_all
 
