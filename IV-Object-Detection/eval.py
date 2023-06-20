@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 def IoU(boxA, boxB):
     ## From https://pyimagesearch.com/2016/11/07/intersection-over-union-iou-for-object-detection/
@@ -21,6 +21,7 @@ def IoU(boxA, boxB):
 	iou = interArea / float(boxAArea + boxBArea - interArea)
 	# return the intersection over union value
 	return iou
+
 
 def nms_pytorch(P : torch.tensor ,thresh_iou : float):
     """
@@ -118,3 +119,13 @@ def nms_pytorch(P : torch.tensor ,thresh_iou : float):
         order = order[mask]
      
     return keep
+
+
+def compute_map(pred: dict, target: dict):
+    """
+    Computes Mean Average Precision for dictionaries of predictions and targets
+    https://torchmetrics.readthedocs.io/en/stable/detection/mean_average_precision.html
+    """
+    metric = MeanAveragePrecision(box_format='xywh')
+    metric.update(pred, target)
+    return(metric.compute()['map'])

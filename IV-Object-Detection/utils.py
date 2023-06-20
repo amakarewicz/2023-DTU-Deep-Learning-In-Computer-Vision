@@ -150,10 +150,48 @@ def selective_search_test(images: list, bboxes: list, img_size: int = 256):
     return cropped_images_all, proposals_all
 
 
+def reshape_output(model, test_cropped_images_all, test_proposals_all):
+    """
+    Computes the output of the model and reshapes it so that mAP can be calculated.
+    """
+    test_data = torch.stack(test_cropped_images_all).to(device)
+            
+    with torch.no_grad():
+        output = model(test_data)[:,0]
+    predicted = (output > 0.5).tolist()
+
+    # Reshaping
+    output = output.tolist()
+    new_shape = [len(l) for l in test_proposals_all]
+    output_new_shape, predicted_new_shape = [], []
+    head = 0
+    for l in new_shape:
+        output_new_shape.append(output[head:l+head])
+        predicted_new_shape.append(predicted[head:l+head])
+        head += l
+
+    # Filitering classes from background
+    predicted_bboxes = list(compress(test_proposals_all, predicted_new_shape))
+    output_new_shape = list(compress(output_new_shape, predicted_new_shape))
+
+    pred = [dict(
+        boxes=torch.FloatTensor(bboxes),
+        scores=torch.FloatTensor(out),
+        labels=torch.ones(len(out)) # Simplification for Binary
+    ) for bboxes, out in zip(predicted_bboxes, output_new_shape)]
+    
+    return pred
+
+
 def train(model, train_loader, test_loader, loss_function, optimizer, num_epochs, model_name, lr_scheduler=None, save_model=False):
-  
+    
+    out_dict = {'train_map': [],
+                'test_map': []}    
+    
     for epoch in tqdm(range(num_epochs), unit='epoch'):
         model.train()
+        train_map = []
+        
         for minibatch_no, batch in tqdm(enumerate(train_loader), total=len(train_loader)):
             images = [image for image, _, _ in batch]
             bboxes = [bbox for _, bbox, _ in batch]
@@ -171,47 +209,37 @@ def train(model, train_loader, test_loader, loss_function, optimizer, num_epochs
             optimizer.step()
             if lr_scheduler is not None:
                 lr_scheduler.step()
-#             train_loss.append(loss.item())
-#             predicted = output > 0.5
-#             train_correct += (target==predicted).sum().cpu().item()
-#             train_len += data.shape[0]
-            break
+            
+            # Evalutaion
+            pred = reshape_output(model, cropped_images_all, proposals_all)
+            
+            target = [dict(
+                boxes=torch.FloatTensor(bbox),
+                labels=torch.FloatTensor(label)
+            ) for bbox, label in zip(bboxes, labels)]
+            
+            # Computing mAP
+            print(len(pred))
+            print(len(target))
+            map_score = compute_map(pred, target)
+            train_map.append(map_score.detach().numpy())
+            
             
         # Test evaluation
         model.eval()
+        test_map = []
+        
         for batch in test_loader:
             test_images = [image for image, _, _ in batch]
             test_bboxes = [bbox for _, bbox, _ in batch]
             test_labels = [label for _, _, label in batch]
             
             # Selective search
-            test_cropped_images_all, test_proposals_all, _ = selective_search_train(test_images, test_bboxes)
+            # test_cropped_images_all, test_proposals_all, _ = selective_search_train(test_images, test_bboxes)
+            test_cropped_images_all, test_proposals_all = selective_search_test(test_images, test_bboxes)
             # selective_search_test runs out of memory :(
-            test_data = torch.stack(test_cropped_images_all).to(device)
             
-            with torch.no_grad():
-                outputs = model(test_data)[:,0]
-            predicted = (outputs > 0.5).tolist()
-            
-            # Reshaping
-            outputs = outputs.tolist()
-            new_shape = [len(l) for l in test_proposals_all]
-            output_new_shape, predicted_new_shape = [], []
-            head = 0
-            for l in new_shape:
-                output_new_shape.append(outputs[head:l+head])
-                predicted_new_shape.append(predicted[head:l+head])
-                head += l
-
-            # Filitering classes from background
-            predicted_bboxes = list(compress(test_proposals_all, predicted_new_shape))
-            output_new_shape = list(compress(output_new_shape, predicted_new_shape))
-            
-            pred = [dict(
-                boxes=torch.FloatTensor(bboxes),
-                scores=torch.FloatTensor(output),
-                labels=torch.ones(len(output)) # Simplification for Binary
-            ) for bboxes, output in zip(predicted_bboxes, output_new_shape)]
+            pred = reshape_output(model, test_cropped_images_all, test_proposals_all)
             
             target = [dict(
                 boxes=torch.FloatTensor(bboxes),
@@ -219,24 +247,14 @@ def train(model, train_loader, test_loader, loss_function, optimizer, num_epochs
             ) for bboxes, label in zip(test_bboxes, test_labels)]
             
             # Computing mAP
-            metric = MeanAveragePrecision()
-            metric.update(pred, target)
-            print(metric.compute())
-            
-#             test_correct += (target==predicted).sum().cpu().item()
-#             test_len += data.shape[0]
-
-#         if save_model and epoch > 0 and test_correct/test_len > max(out_dict['test_acc']):
-#             torch.save(model, 'models/' + model_name)
+            map_score = compute_map(pred, target)
+            test_map.append(map_score.detach().numpy())
             
             
-#         out_dict['train_acc'].append(train_correct/train_len)
-#         out_dict['test_acc'].append(test_correct/test_len)
-#         out_dict['train_loss'].append(np.mean(train_loss))
-#         out_dict['test_loss'].append(np.mean(test_loss))
+        out_dict['train_map'].append(np.mean(train_map))
+        out_dict['test_map'].append(np.mean(test_map))
 
         
-#         print(f"Loss train: {np.mean(train_loss):.3f}\t test: {np.mean(test_loss):.3f}\t",
-#               f"Accuracy train: {out_dict['train_acc'][-1]*100:.1f}%\t test: {out_dict['test_acc'][-1]*100:.1f}%")
+        print(f"MAP train: {np.mean(train_map):.3f}\t test: {np.mean(test_map):.3f}")
         
-#     return out_dict
+    return out_dict
