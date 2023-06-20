@@ -14,6 +14,8 @@ import copy
 from config import *
 from eval import *
 
+import time
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def get_image_and_annotations(imgs, anns, img_id,):
@@ -24,11 +26,10 @@ def get_image_and_annotations(imgs, anns, img_id,):
     ann = [{'id':a['id'],
             'image_id':a['image_id'],
             'category_id': a['category_id'],
-            # change w, h to x1, y1 
             'bbox':[a['bbox'][0],
                     a['bbox'][1],
-                    a['bbox'][0] + a['bbox'][2],
-                    a['bbox'][1]+ a['bbox'][3]],
+                    a['bbox'][2],
+                    a['bbox'][3]],
             'iscrowd':a['iscrowd']
            } for a in anns if a['image_id'] == img_id]
     
@@ -93,19 +94,29 @@ def selective_search(img):
     # run selective search
     rects = ss.process()
 
-    
-    # get rectangles to x1, y1, x2, y2 as this is format in IoU 
-    rects[:, 2] = rects[:, 0] + rects[:, 2]
-    rects[:, 3] = rects[:, 1] + rects[:, 3]
-
     rects = rects[:250, :]
 
     
     #print('Total Number of Region Proposals: {}'.format(len(rects))) # TODO: comment out after making the whole trainset work
     return rects
 
+edge_detection_model = cv2.ximgproc.createStructuredEdgeDetection('model.yml.gz')
+def edge_boxes(img, max_boxes: int = 2000, alpha = None, beta = None):
+    eb = cv2.ximgproc.createEdgeBoxes()
+    
+    # rgb_im = cv.cvtColor(im, cv.COLOR_BGR2RGB)
+    edges = edge_detection_model.detectEdges(np.float32(img) / 255.0)
 
-def selective_search_train(images: list, bboxes: list, k: float = 0.6, p: float = 0.01, img_size: int = 300):
+    orimap = edge_detection_model.computeOrientation(edges)
+    edges = edge_detection_model.edgesNms(edges, orimap)
+
+    edge_boxes = cv2.ximgproc.createEdgeBoxes()
+    edge_boxes.setMaxBoxes(max_boxes)
+
+    boxes, _ = edge_boxes.getBoundingBoxes(edges, orimap)
+    return boxes
+
+def edge_boxes_train(images: list, bboxes: list, k: float = 0.5, p: float = 0.01, img_size: int = 150):
     """
     Takes lists of images and bboxes and returns proposals, cropped images and predictions.
     """
@@ -113,27 +124,26 @@ def selective_search_train(images: list, bboxes: list, k: float = 0.6, p: float 
     predictions_all = []
     cropped_images_all = []
     for image, img_bboxes in zip(images, bboxes):
-        proposals = selective_search(image.permute([1,2,0]).numpy())
+
+        proposals = edge_boxes( image.permute([1,2,0]).numpy())
+        ## proposals = selective_search(image.permute([1,2,0]).numpy())
         proposals_img = []
 
         # IoU
         for proposal in proposals:
             scores_all = []
-
-            proposal_wh = copy.copy(proposal)
-            proposal_wh[2] = proposal_wh[2] - proposal_wh[0]
-            proposal_wh[3] = proposal_wh[3] - proposal_wh[1]
             
+            t1 = time.time() 
             for bbox in img_bboxes:
-                score = IoU(proposal, bbox)
+                score = calculate_iou(proposal, bbox)
                 scores_all.append(score)
             
-
             prediction = max(scores_all) > k # Binary classification
-
+            x, y, w, h = proposal
+            
             # Extract image
             if prediction or random.random() < p:
-                cropped_image = fn.crop(image, *proposal_wh)
+                cropped_image = image[:, y:y+h, x:x+w]
                 resized_image = fn.resize(cropped_image, size=[img_size, img_size])
 
                 cropped_images_all.append(resized_image)
@@ -155,18 +165,10 @@ def selective_search_test(images: list, bboxes: list, img_size: int = 300):
     for image, img_bboxes in zip(images, bboxes):
         proposals = selective_search(image.permute([1,2,0]).numpy())
 
-
-        
         # Extract image
         for proposal in proposals:
-
-                        
-            proposal_wh = copy.copy(proposal)
-            proposal_wh[2] = proposal_wh[2] - proposal_wh[0]
-            proposal_wh[3] = proposal_wh[3] - proposal_wh[1]
             
-            
-            cropped_image = fn.crop(image, *proposal_wh)
+            cropped_image = fn.crop(image, *proposal)
             resized_image = fn.resize(cropped_image, size=[img_size, img_size])
             cropped_images_all.append(resized_image)
 
