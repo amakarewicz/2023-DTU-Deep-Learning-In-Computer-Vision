@@ -9,6 +9,7 @@ import cv2
 import random
 import numpy as np
 from itertools import compress
+import copy 
 
 from config import *
 from eval import *
@@ -91,11 +92,20 @@ def selective_search(img):
     # ss.switchToSelectiveSearchQuality() 
     # run selective search
     rects = ss.process()
-    print('Total Number of Region Proposals: {}'.format(len(rects))) # TODO: comment out after making the whole trainset work
+
+    
+    # get rectangles to x1, y1, x2, y2 as this is format in IoU 
+    rects[:, 2] = rects[:, 0] + rects[:, 2]
+    rects[:, 3] = rects[:, 1] + rects[:, 3]
+
+    rects = rects[:250, :]
+
+    
+    #print('Total Number of Region Proposals: {}'.format(len(rects))) # TODO: comment out after making the whole trainset work
     return rects
 
 
-def selective_search_train(images: list, bboxes: list, k: float = 0.5, p: float = 0.01, img_size: int = 256):
+def selective_search_train(images: list, bboxes: list, k: float = 0.6, p: float = 0.01, img_size: int = 300):
     """
     Takes lists of images and bboxes and returns proposals, cropped images and predictions.
     """
@@ -109,15 +119,21 @@ def selective_search_train(images: list, bboxes: list, k: float = 0.5, p: float 
         # IoU
         for proposal in proposals:
             scores_all = []
+
+            proposal_wh = copy.copy(proposal)
+            proposal_wh[2] = proposal_wh[2] - proposal_wh[0]
+            proposal_wh[3] = proposal_wh[3] - proposal_wh[1]
+            
             for bbox in img_bboxes:
                 score = IoU(proposal, bbox)
                 scores_all.append(score)
+            
 
             prediction = max(scores_all) > k # Binary classification
 
             # Extract image
             if prediction or random.random() < p:
-                cropped_image = fn.crop(image, *proposal)
+                cropped_image = fn.crop(image, *proposal_wh)
                 resized_image = fn.resize(cropped_image, size=[img_size, img_size])
 
                 cropped_images_all.append(resized_image)
@@ -130,7 +146,7 @@ def selective_search_train(images: list, bboxes: list, k: float = 0.5, p: float 
 
 
 # CUDA out of memory :(
-def selective_search_test(images: list, bboxes: list, img_size: int = 256):
+def selective_search_test(images: list, bboxes: list, img_size: int = 300):
     """
     Takes lists of images and bboxes and returns proposals, cropped images and predictions.
     """
@@ -139,11 +155,22 @@ def selective_search_test(images: list, bboxes: list, img_size: int = 256):
     for image, img_bboxes in zip(images, bboxes):
         proposals = selective_search(image.permute([1,2,0]).numpy())
 
+
+        
         # Extract image
         for proposal in proposals:
-            cropped_image = fn.crop(image, *proposal)
+
+                        
+            proposal_wh = copy.copy(proposal)
+            proposal_wh[2] = proposal_wh[2] - proposal_wh[0]
+            proposal_wh[3] = proposal_wh[3] - proposal_wh[1]
+            
+            
+            cropped_image = fn.crop(image, *proposal_wh)
             resized_image = fn.resize(cropped_image, size=[img_size, img_size])
             cropped_images_all.append(resized_image)
+
+            
                 
         proposals_all.append(proposals)
                 
@@ -221,7 +248,7 @@ def train(model, train_loader, test_loader, loss_function, optimizer, num_epochs
             # Computing mAP
             metric = MeanAveragePrecision()
             metric.update(pred, target)
-            print(metric.compute())
+            # print(metric.compute())
             
 #             test_correct += (target==predicted).sum().cpu().item()
 #             test_len += data.shape[0]
