@@ -6,8 +6,8 @@ def IoU(boxA, boxB):
 	# determine the (x, y)-coordinates of the intersection rectangle
 	xA = max(boxA[0], boxB[0])
 	yA = max(boxA[1], boxB[1])
-	xB = min(boxA[2], boxB[2])
-	yB = min(boxA[3], boxB[3])
+	xB = min(boxA[0]+boxA[2], boxB[0]+boxB[2])
+	yB = min(boxA[1]+boxA[3], boxB[1]+boxB[3])
 	# compute the area of intersection rectangle
 	interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
 	# compute the area of both the prediction and ground-truth
@@ -41,8 +41,8 @@ def NonMaxSuppress(P : torch.tensor ,thresh_iou : float):
     # prediction box present in P
     x1 = P[:, 0]
     y1 = P[:, 1]
-    x2 = P[:, 2]
-    y2 = P[:, 3]
+    x2 = x1 + P[:, 2]
+    y2 = y1 + P[:, 3]
  
     # we extract the confidence scores as well
     #scores = P[:, 4]
