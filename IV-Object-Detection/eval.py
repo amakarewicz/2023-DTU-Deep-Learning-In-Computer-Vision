@@ -103,10 +103,8 @@ def calculate_highest_iou(proposed_boxes, ground_truth_boxes):
 
     return max_iou
 
-def nms_pytorch(P : torch.tensor ,thresh_iou : float):
+def NMS(P : torch.tensor ,thresh_iou : float, thresh_pred = 0.5):
     """
-    From https://learnopencv.com/non-maximum-suppression-theory-and-implementation-in-pytorch/
-    This might also be an option: https://pyimagesearch.com/2015/02/16/faster-non-maximum-suppression-python/
     Apply non-maximum suppression to avoid detecting too many
     overlapping bounding boxes for a given object.
     Args:
@@ -116,25 +114,23 @@ def nms_pytorch(P : torch.tensor ,thresh_iou : float):
     Returns:
         A list of filtered boxes, Shape: [ , 5]
     """
-    # Convert from list of tuples to list of lists
-    P = [list(ele) for ele in P]
-    P = torch.FloatTensor(P)
+ 
     # we extract coordinates for every 
     # prediction box present in P
     x1 = P[:, 0]
     y1 = P[:, 1]
-    x2 = P[:, 2] + P[:, 0] 
+    x2 = P[:, 2] + P[:, 0]
     y2 = P[:, 3] + P[:, 1]
  
     # we extract the confidence scores as well
-    #scores = P[:, 4]
+    scores = P[:, 4]
  
     # calculate area of every block in P
     areas = (x2 - x1) * (y2 - y1)
      
     # sort the prediction boxes in P
     # according to their confidence scores
-    order = torch.IntTensor(list(range(0,len(P))))
+    order = scores.argsort()
  
     # initialise an empty list for 
     # filtered prediction boxes
@@ -142,12 +138,13 @@ def nms_pytorch(P : torch.tensor ,thresh_iou : float):
      
  
     while len(order) > 0:
-         
         # extract the index of the 
         # prediction with highest score
         # we call this prediction S
         idx = order[-1]
- 
+        if scores[idx] < thresh_pred:
+            order = order[:-1]
+            continue
         # push S in filtered predictions list
         keep.append(P[idx])
  
@@ -200,5 +197,8 @@ def nms_pytorch(P : torch.tensor ,thresh_iou : float):
      
     return keep
 
-def assign_labels():
-    return None
+def stack_results(proposals_all, results, device):
+    props_all = [list(ele) for ele in proposals_all]
+    props_all = torch.FloatTensor(props_all).squeeze(0)
+
+    return torch.hstack((props_all.to(device), results.unsqueeze(1)))
