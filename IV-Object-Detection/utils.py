@@ -10,7 +10,6 @@ import random
 import numpy as np
 from itertools import compress
 import copy 
-import torchvision.transforms as transforms
 
 from config import *
 from eval import *
@@ -101,23 +100,10 @@ def selective_search(img):
     #print('Total Number of Region Proposals: {}'.format(len(rects))) # TODO: comment out after making the whole trainset work
     return rects
 
-
-def denormalize(img):
-    mean=[0.485, 0.456, 0.406]
-    std=[0.229, 0.224, 0.225]
-    
-    denormalize = transforms.Normalize(mean=[-0.485, -0.456, -0.406], 
-                         std=[1/0.229, 1/0.224, 1/0.225])
-
-    denorm_image = denormalize(img)
-    x = ((denorm_image - denorm_image.min())/(denorm_image - denorm_image.min()).max() * 255).to(torch.int64)
-    return x
-
-
 edge_detection_model = cv2.ximgproc.createStructuredEdgeDetection('model.yml.gz')
-def edge_boxes(img, max_boxes: int = 200, alpha = None, beta = None):
+def edge_boxes(img, max_boxes: int = 2000, alpha = None, beta = None):
     eb = cv2.ximgproc.createEdgeBoxes()
-
+    
     # rgb_im = cv.cvtColor(im, cv.COLOR_BGR2RGB)
     edges = edge_detection_model.detectEdges(np.float32(img) / 255.0)
 
@@ -139,9 +125,7 @@ def edge_boxes_train(images: list, bboxes: list, k: float = 0.5, p: float = 0.01
     cropped_images_all = []
     for image, img_bboxes in zip(images, bboxes):
 
-        
-        image_denorm = denormalize(image)
-        proposals = edge_boxes( image_denorm.permute([1,2,0]).numpy())
+        proposals = edge_boxes( image.permute([1,2,0]).numpy())
         ## proposals = selective_search(image.permute([1,2,0]).numpy())
         proposals_img = []
 
@@ -171,37 +155,6 @@ def edge_boxes_train(images: list, bboxes: list, k: float = 0.5, p: float = 0.01
     return cropped_images_all, proposals_all, predictions_all
 
 
-def edge_boxes_test(images: list, bboxes: list, k: float = 0.5, p: float = 0.01, img_size: int = 150):
-    """
-    Takes lists of images and bboxes and returns proposals, cropped images and predictions.
-    """
-    proposals_all = []
-    predictions_all = []
-    cropped_images_all = []
-    for image, img_bboxes in zip(images, bboxes):
-
-        image_denorm = denormalize(image)
-        proposals = edge_boxes(image_denorm.permute([1,2,0]).numpy())
-        ## proposals = selective_search(image.permute([1,2,0]).numpy())
-        proposals_img = []
-
-        # IoU
-        for proposal in proposals:
-            
-            x, y, w, h = proposal
-            
-            # Extract image
-            cropped_image = image[:, y:y+h, x:x+w]
-            resized_image = fn.resize(cropped_image, size=[img_size, img_size])
-            
-            cropped_images_all.append(resized_image)
-            proposals_img.append(proposal.tolist())
-            
-        proposals_all.append(proposals_img)
-                
-    return cropped_images_all, proposals_all
-
-    
 # CUDA out of memory :(
 def selective_search_test(images: list, bboxes: list, img_size: int = 300):
     """
@@ -261,7 +214,7 @@ def train(model, train_loader, test_loader, loss_function, optimizer, num_epochs
             test_labels = [label for _, _, label in batch]
             
             # Selective search
-            test_cropped_images_all, test_proposals_all, _ = selective_search_est(test_images, test_bboxes)
+            test_cropped_images_all, test_proposals_all, _ = selective_search_train(test_images, test_bboxes)
             # selective_search_test runs out of memory :(
             test_data = torch.stack(test_cropped_images_all).to(device)
             

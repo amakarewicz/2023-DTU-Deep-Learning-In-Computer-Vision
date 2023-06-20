@@ -201,8 +201,4 @@ def stack_results(proposals_all, results, device):
     props_all = [list(ele) for ele in proposals_all]
     props_all = torch.FloatTensor(props_all).squeeze(0)
 
-<<<<<<< HEAD
     return torch.hstack((props_all.to(device), results.unsqueeze(1)))
-=======
-    return torch.hstack((props_all.to(device), results.unsqueeze(1)))
->>>>>>> c20d2f4 (add denorm)
