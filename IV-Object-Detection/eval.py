@@ -103,7 +103,7 @@ def calculate_highest_iou(proposed_boxes, ground_truth_boxes):
 
     return max_iou
 
-def NMS(P : torch.tensor ,thresh_iou : float, thresh_pred = 0.5):
+def NMS(P : torch.tensor, thresh_iou : float, thresh_pred = 0.5):
     """
     Apply non-maximum suppression to avoid detecting too many
     overlapping bounding boxes for a given object.
